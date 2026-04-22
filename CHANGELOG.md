@@ -1,4 +1,4 @@
-## 0.1.0
+## 0.1.1
 
 - Initial release of `visual_effects_kit`.
 - Added `VisualEffectSurface` for animated procedural effect backgrounds.
