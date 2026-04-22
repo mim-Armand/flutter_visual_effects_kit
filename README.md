@@ -167,11 +167,13 @@ flutter run -d chrome
 
 
 After a successful publish, create a version tag so the source matches what was uploaded:
+```
 git add .
 git commit -m "Release visual_effects_kit v0.1.1"
 git tag v0.1.1
 git push
 git push origin v0.1.1
+```
 
 Replace 0.1.1 with the version you actually published.
 
@@ -179,6 +181,7 @@ Replace 0.1.1 with the version you actually published.
 
 From the package root, a typical publish flow looks like this:
 
+```
 git status
 flutter pub get
 cd example
@@ -192,6 +195,7 @@ flutter test
 cd ..
 flutter pub publish --dry-run
 flutter pub publish
+```
 
 
 ## Roadmap
