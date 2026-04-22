@@ -161,19 +161,38 @@ cd example
 flutter run -d chrome
 ```
 
-## Publishing readiness
+## Publish procedure
 
-This package includes:
+- Tag the release in git
 
-- package metadata suitable for pub.dev
-- a license file
-- changelog
-- analysis options
-- package tests
-- example app
-- DartDoc comments on the public API
 
-Before publishing, you may still want to add repository and issue tracker links in `pubspec.yaml` if you have them.
+After a successful publish, create a version tag so the source matches what was uploaded:
+git add .
+git commit -m "Release visual_effects_kit v0.1.1"
+git tag v0.1.1
+git push
+git push origin v0.1.1
+
+Replace 0.1.1 with the version you actually published.
+
+## Full command sequence
+
+From the package root, a typical publish flow looks like this:
+
+git status
+flutter pub get
+cd example
+flutter pub get
+cd ..
+dart format lib test example/lib example/test
+flutter analyze
+flutter test
+cd example
+flutter test
+cd ..
+flutter pub publish --dry-run
+flutter pub publish
+
 
 ## Roadmap
 
