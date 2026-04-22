@@ -1,6 +1,9 @@
 name: visual_effects_kit
 description: Procedural Flutter visual effects for animated backgrounds, surfaces, and interactive UI accents.
-version: 0.1.0
+version: 0.1.1
+repository: https://github.com/mim-Armand/flutter_visual_effects_kit
+homepage: https://github.com/mim-Armand/flutter_visual_effects_kit
+issue_tracker: https://github.com/mim-Armand/flutter_visual_effects_kit/issues
 topics:
   - flutter
   - animation
