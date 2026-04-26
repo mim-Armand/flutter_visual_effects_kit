@@ -1,4 +1,5 @@
 export 'src/effects/dot_field_effect.dart';
+export 'src/effects/liquid_ripple_effect.dart';
 export 'src/effects/plus_grid_effect.dart';
 export 'src/effects/visual_effect.dart';
 export 'src/effects/visual_effect_registry.dart';

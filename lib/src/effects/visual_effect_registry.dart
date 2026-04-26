@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'dot_field_effect.dart';
+import 'liquid_ripple_effect.dart';
 import 'plus_grid_effect.dart';
 import 'visual_effect.dart';
 import 'wave_grid_effect.dart';
@@ -98,7 +99,12 @@ class VisualEffectRegistry {
 /// Global access to built-in and user-registered effects.
 abstract final class VisualEffects {
   static final VisualEffectRegistry _registry = VisualEffectRegistry(
-    const <VisualEffect>[PlusGridEffect(), DotFieldEffect(), WaveGridEffect()],
+    const <VisualEffect>[
+      PlusGridEffect(),
+      DotFieldEffect(),
+      WaveGridEffect(),
+      LiquidRippleEffect(),
+    ],
   );
 
   /// All currently available effects in registry order.

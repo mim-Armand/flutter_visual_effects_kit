@@ -15,6 +15,7 @@ class VisualEffectFrame {
     required this.timeSeconds,
     required this.pointerPosition,
     required this.pointerStrength,
+    this.ripples = const <VisualEffectRipple>[],
   });
 
   /// Full size of the hosting widget.
@@ -37,6 +38,9 @@ class VisualEffectFrame {
 
   /// Smoothed interaction strength between `0` and `1`.
   final double pointerStrength;
+
+  /// Active click or touch ripples available to the effect.
+  final List<VisualEffectRipple> ripples;
 
   /// The local size available to the effect.
   Size get paintSize => paintRect.size;
@@ -77,4 +81,27 @@ class VisualEffectFrame {
 
   /// Returns a soft sine wave in the `0..1` range.
   static double sine01(double value) => 0.5 + 0.5 * math.sin(value);
+}
+
+/// A click or touch ripple that can be consumed by an effect.
+@immutable
+class VisualEffectRipple {
+  /// Creates a ripple snapshot.
+  const VisualEffectRipple({
+    required this.position,
+    required this.ageSeconds,
+    required this.progress,
+  });
+
+  /// Ripple origin in local effect coordinates.
+  final Offset position;
+
+  /// Age of the ripple in seconds.
+  final double ageSeconds;
+
+  /// Normalized lifetime progress in the `0..1` range.
+  final double progress;
+
+  /// Strength multiplier that fades as the ripple ages.
+  double get strength => 1 - progress.clamp(0.0, 1.0);
 }

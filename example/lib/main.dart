@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:visual_effects_kit/visual_effects_kit.dart';
 
 void main() {
@@ -35,6 +36,128 @@ Color _fade(Color color, double opacity) {
   return color.withAlpha((opacity * 255).round().clamp(0, 255));
 }
 
+String _formatColorLiteral(Color color) {
+  final value = (((color.a * 255).round() & 0xff) << 24) |
+      (((color.r * 255).round() & 0xff) << 16) |
+      (((color.g * 255).round() & 0xff) << 8) |
+      ((color.b * 255).round() & 0xff);
+  return 'Color(0x${value.toRadixString(16).padLeft(8, '0').toUpperCase()})';
+}
+
+String _formatDoubleLiteral(double value) {
+  final rounded = value.toStringAsFixed(2);
+  return rounded.contains('.')
+      ? rounded
+          .replaceFirst(RegExp(r'0+$'), '')
+          .replaceFirst(RegExp(r'\.$'), '')
+      : rounded;
+}
+
+String _formatStringLiteral(String value) {
+  final escaped = value.replaceAll(r'\', r'\\').replaceAll("'", r"\'");
+  return "'$escaped'";
+}
+
+String _formatCurveLiteral(Curve curve) {
+  if (curve == Curves.linear) {
+    return 'Curves.linear';
+  }
+  if (curve == Curves.easeInOut) {
+    return 'Curves.easeInOut';
+  }
+  if (curve == Curves.easeInOutCubic) {
+    return 'Curves.easeInOutCubic';
+  }
+  if (curve == Curves.easeOutQuad) {
+    return 'Curves.easeOutQuad';
+  }
+  return 'Curves.easeOutCubic';
+}
+
+String _formatShapeLiteral(VisualEffectShape shape) {
+  return switch (shape) {
+    VisualEffectShape.none => 'VisualEffectShape.none',
+    VisualEffectShape.circle => 'VisualEffectShape.circle',
+    VisualEffectShape.square => 'VisualEffectShape.square',
+    VisualEffectShape.star => 'VisualEffectShape.star',
+  };
+}
+
+String _shapeLabel(VisualEffectShape shape) {
+  return switch (shape) {
+    VisualEffectShape.none => 'Text',
+    VisualEffectShape.circle => 'Circle',
+    VisualEffectShape.square => 'Square',
+    VisualEffectShape.star => 'Star',
+  };
+}
+
+String _formatEdgeInsetsLiteral(EdgeInsets padding) {
+  if (padding.left == padding.top &&
+      padding.left == padding.right &&
+      padding.left == padding.bottom) {
+    return 'EdgeInsets.all(${_formatDoubleLiteral(padding.left)})';
+  }
+
+  if (padding.left == padding.right && padding.top == padding.bottom) {
+    return 'EdgeInsets.symmetric('
+        'horizontal: ${_formatDoubleLiteral(padding.left)}, '
+        'vertical: ${_formatDoubleLiteral(padding.top)})';
+  }
+
+  return 'EdgeInsets.fromLTRB('
+      '${_formatDoubleLiteral(padding.left)}, '
+      '${_formatDoubleLiteral(padding.top)}, '
+      '${_formatDoubleLiteral(padding.right)}, '
+      '${_formatDoubleLiteral(padding.bottom)})';
+}
+
+String _buildConfigSnippet({
+  required _SelectionMode selectionMode,
+  required String selectedEffectName,
+  required int selectedEffectIndex,
+  required VisualEffectConfig config,
+}) {
+  final effectColors = config.effectColors.map((color) {
+    return '    ${_formatColorLiteral(color)},';
+  }).join('\n');
+
+  final selectionLine = selectionMode == _SelectionMode.name
+      ? "  effectName: ${_formatStringLiteral(selectedEffectName)},"
+      : '  effectIndex: $selectedEffectIndex,';
+
+  return '''
+final config = VisualEffectConfig(
+  backgroundColor: ${_formatColorLiteral(config.backgroundColor)},
+  foregroundColor: ${_formatColorLiteral(config.foregroundColor)},
+  accentColor: ${_formatColorLiteral(config.accentColor)},
+  effectColors: <Color>[
+$effectColors
+  ],
+  density: ${_formatDoubleLiteral(config.density)},
+  symbol: ${_formatStringLiteral(config.symbol)},
+  shape: ${_formatShapeLiteral(config.shape)},
+  baseCellSize: ${_formatDoubleLiteral(config.baseCellSize)},
+  minScale: ${_formatDoubleLiteral(config.minScale)},
+  maxScale: ${_formatDoubleLiteral(config.maxScale)},
+  interactionRadius: ${_formatDoubleLiteral(config.interactionRadius)},
+  animationSpeed: ${_formatDoubleLiteral(config.animationSpeed)},
+  randomMotionStrength: ${_formatDoubleLiteral(config.randomMotionStrength)},
+  easing: ${_formatCurveLiteral(config.easing)},
+  enablePointerInteraction: ${config.enablePointerInteraction},
+  enableRipples: ${config.enableRipples},
+  opacity: ${_formatDoubleLiteral(config.opacity)},
+  padding: ${_formatEdgeInsetsLiteral(config.padding)},
+  randomSeed: ${config.randomSeed},
+);
+
+VisualEffectSurface(
+$selectionLine
+  config: config,
+);
+''';
+}
+
 enum _SelectionMode { name, byIndex }
 
 class _DemoPage extends StatefulWidget {
@@ -51,38 +174,85 @@ class _DemoPageState extends State<_DemoPage> {
       background: Color(0xFF08111E),
       foreground: Color(0xFFD7E6FB),
       accent: Color(0xFF70F4E1),
+      effectColors: <Color>[
+        Color(0xFF8AF7E4),
+        Color(0xFF77C8FF),
+        Color(0xFFD7E6FB),
+        Color(0xFF6C8DFF),
+        Color(0xFF5AF2B8),
+      ],
     ),
     _PaletteOption(
       name: 'Warm Ember',
       background: Color(0xFF180E0A),
       foreground: Color(0xFFF8DEC8),
       accent: Color(0xFFFF8E6E),
+      effectColors: <Color>[
+        Color(0xFFFFA36D),
+        Color(0xFFFFD09B),
+        Color(0xFFF8DEC8),
+        Color(0xFFFF6A5B),
+        Color(0xFFFFC04D),
+      ],
     ),
     _PaletteOption(
       name: 'Soft Mist',
       background: Color(0xFFF3F5F9),
       foreground: Color(0xFF3E516B),
       accent: Color(0xFF00889A),
+      effectColors: <Color>[
+        Color(0xFF7FD6E2),
+        Color(0xFFBCD3E6),
+        Color(0xFF3E516B),
+        Color(0xFF4A90B5),
+        Color(0xFF7ABFA8),
+      ],
     ),
   ];
 
   static const List<String> _symbols = <String>['+', '×', '*', '•'];
+  static const List<VisualEffectShape> _shapes = <VisualEffectShape>[
+    VisualEffectShape.none,
+    VisualEffectShape.circle,
+    VisualEffectShape.square,
+    VisualEffectShape.star,
+  ];
 
   _SelectionMode _selectionMode = _SelectionMode.name;
   String _selectedEffectName = VisualEffects.effectNames.first;
   int _selectedEffectIndex = 0;
   _PaletteOption _palette = _palettes.first;
-  String _symbol = '+';
   double _density = 1.1;
   double _radius = 150;
   double _maxScale = 2.5;
   double _speed = 1.0;
+  double _randomMotionStrength = 0.18;
   double _opacity = 1.0;
+  double _panelBlur = 18.0;
   bool _interactive = true;
+  bool _enableRipples = true;
   bool _repaintContinuously = true;
+  VisualEffectShape _shape = VisualEffectShape.none;
+  late final TextEditingController _symbolController;
+
+  String get _currentSymbol =>
+      _symbolController.text.trim().isEmpty ? '+' : _symbolController.text;
+
+  @override
+  void initState() {
+    super.initState();
+    _symbolController = TextEditingController(text: '+');
+  }
+
+  @override
+  void dispose() {
+    _symbolController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final symbol = _currentSymbol;
     final currentEffect = _selectionMode == _SelectionMode.name
         ? VisualEffects.resolve(effectName: _selectedEffectName)
         : VisualEffects.resolve(effectIndex: _selectedEffectIndex);
@@ -91,11 +261,15 @@ class _DemoPageState extends State<_DemoPage> {
       backgroundColor: _palette.background,
       foregroundColor: _palette.foreground,
       accentColor: _palette.accent,
+      effectColors: _palette.effectColors,
       density: _density,
-      symbol: _symbol,
+      symbol: symbol,
+      shape: _shape,
       maxScale: _maxScale,
       interactionRadius: _radius,
       animationSpeed: _speed,
+      randomMotionStrength: _randomMotionStrength,
+      enableRipples: _enableRipples,
       opacity: _opacity,
       padding: const EdgeInsets.all(12),
     );
@@ -116,100 +290,132 @@ class _DemoPageState extends State<_DemoPage> {
               final wide = constraints.maxWidth >= 1024;
               final content = wide
                   ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(24, 24, 12, 24),
-                            child: _HeroPanel(
-                              currentEffect: currentEffect,
-                              selectionMode: _selectionMode,
-                              selectedEffectIndex: _selectedEffectIndex,
-                            ),
-                          ),
-                        ),
                         SizedBox(
                           width: 380,
                           child: Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 24, 12, 24),
+                            child: SingleChildScrollView(
+                              child: _ControlsPanel(
+                                selectionMode: _selectionMode,
+                                selectedEffectName: _selectedEffectName,
+                                selectedEffectIndex: _selectedEffectIndex,
+                                palette: _palette,
+                                symbolController: _symbolController,
+                                currentSymbol: symbol,
+                                shape: _shape,
+                                shapes: _shapes,
+                                density: _density,
+                                radius: _radius,
+                                maxScale: _maxScale,
+                                speed: _speed,
+                                randomMotionStrength: _randomMotionStrength,
+                                opacity: _opacity,
+                                panelBlur: _panelBlur,
+                                interactive: _interactive,
+                                enableRipples: _enableRipples,
+                                repaintContinuously: _repaintContinuously,
+                                palettes: _palettes,
+                                symbols: _symbols,
+                                onSelectionModeChanged: (mode) {
+                                  setState(() {
+                                    _selectionMode = mode;
+                                  });
+                                },
+                                onEffectNameChanged: (name) {
+                                  setState(() {
+                                    _selectedEffectName = name;
+                                    _selectedEffectIndex =
+                                        VisualEffects.effectNames.indexOf(name);
+                                  });
+                                },
+                                onEffectIndexChanged: (index) {
+                                  setState(() {
+                                    _selectedEffectIndex = index;
+                                    _selectedEffectName =
+                                        VisualEffects.effectNames[index];
+                                  });
+                                },
+                                onPaletteChanged: (palette) {
+                                  setState(() {
+                                    _palette = palette;
+                                  });
+                                },
+                                onSymbolChanged: (_) {
+                                  setState(() {});
+                                },
+                                onShapeChanged: (shape) {
+                                  setState(() {
+                                    _shape = shape;
+                                  });
+                                },
+                                onDensityChanged: (value) {
+                                  setState(() {
+                                    _density = value;
+                                  });
+                                },
+                                onRadiusChanged: (value) {
+                                  setState(() {
+                                    _radius = value;
+                                  });
+                                },
+                                onMaxScaleChanged: (value) {
+                                  setState(() {
+                                    _maxScale = value;
+                                  });
+                                },
+                                onSpeedChanged: (value) {
+                                  setState(() {
+                                    _speed = value;
+                                  });
+                                },
+                                onRandomMotionStrengthChanged: (value) {
+                                  setState(() {
+                                    _randomMotionStrength = value;
+                                  });
+                                },
+                                onOpacityChanged: (value) {
+                                  setState(() {
+                                    _opacity = value;
+                                  });
+                                },
+                                onPanelBlurChanged: (value) {
+                                  setState(() {
+                                    _panelBlur = value;
+                                  });
+                                },
+                                onInteractiveChanged: (value) {
+                                  setState(() {
+                                    _interactive = value;
+                                  });
+                                },
+                                onEnableRipplesChanged: (value) {
+                                  setState(() {
+                                    _enableRipples = value;
+                                  });
+                                },
+                                onRepaintContinuouslyChanged: (value) {
+                                  setState(() {
+                                    _repaintContinuously = value;
+                                  });
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Padding(
                             padding: const EdgeInsets.fromLTRB(12, 24, 24, 24),
-                            child: _ControlsPanel(
-                              selectionMode: _selectionMode,
-                              selectedEffectName: _selectedEffectName,
-                              selectedEffectIndex: _selectedEffectIndex,
-                              palette: _palette,
-                              symbol: _symbol,
-                              density: _density,
-                              radius: _radius,
-                              maxScale: _maxScale,
-                              speed: _speed,
-                              opacity: _opacity,
-                              interactive: _interactive,
-                              repaintContinuously: _repaintContinuously,
-                              palettes: _palettes,
-                              symbols: _symbols,
-                              onSelectionModeChanged: (mode) {
-                                setState(() {
-                                  _selectionMode = mode;
-                                });
-                              },
-                              onEffectNameChanged: (name) {
-                                setState(() {
-                                  _selectedEffectName = name;
-                                  _selectedEffectIndex =
-                                      VisualEffects.effectNames.indexOf(name);
-                                });
-                              },
-                              onEffectIndexChanged: (index) {
-                                setState(() {
-                                  _selectedEffectIndex = index;
-                                  _selectedEffectName =
-                                      VisualEffects.effectNames[index];
-                                });
-                              },
-                              onPaletteChanged: (palette) {
-                                setState(() {
-                                  _palette = palette;
-                                });
-                              },
-                              onSymbolChanged: (symbol) {
-                                setState(() {
-                                  _symbol = symbol;
-                                });
-                              },
-                              onDensityChanged: (value) {
-                                setState(() {
-                                  _density = value;
-                                });
-                              },
-                              onRadiusChanged: (value) {
-                                setState(() {
-                                  _radius = value;
-                                });
-                              },
-                              onMaxScaleChanged: (value) {
-                                setState(() {
-                                  _maxScale = value;
-                                });
-                              },
-                              onSpeedChanged: (value) {
-                                setState(() {
-                                  _speed = value;
-                                });
-                              },
-                              onOpacityChanged: (value) {
-                                setState(() {
-                                  _opacity = value;
-                                });
-                              },
-                              onInteractiveChanged: (value) {
-                                setState(() {
-                                  _interactive = value;
-                                });
-                              },
-                              onRepaintContinuouslyChanged: (value) {
-                                setState(() {
-                                  _repaintContinuously = value;
-                                });
-                              },
+                            child: SingleChildScrollView(
+                              child: _HeroPanel(
+                                currentEffect: currentEffect,
+                                selectionMode: _selectionMode,
+                                selectedEffectName: _selectedEffectName,
+                                selectedEffectIndex: _selectedEffectIndex,
+                                config: config,
+                                panelBlur: _panelBlur,
+                              ),
                             ),
                           ),
                         ),
@@ -222,7 +428,10 @@ class _DemoPageState extends State<_DemoPage> {
                           _HeroPanel(
                             currentEffect: currentEffect,
                             selectionMode: _selectionMode,
+                            selectedEffectName: _selectedEffectName,
                             selectedEffectIndex: _selectedEffectIndex,
+                            config: config,
+                            panelBlur: _panelBlur,
                           ),
                           const SizedBox(height: 18),
                           _ControlsPanel(
@@ -230,13 +439,19 @@ class _DemoPageState extends State<_DemoPage> {
                             selectedEffectName: _selectedEffectName,
                             selectedEffectIndex: _selectedEffectIndex,
                             palette: _palette,
-                            symbol: _symbol,
+                            symbolController: _symbolController,
+                            currentSymbol: symbol,
+                            shape: _shape,
+                            shapes: _shapes,
                             density: _density,
                             radius: _radius,
                             maxScale: _maxScale,
                             speed: _speed,
+                            randomMotionStrength: _randomMotionStrength,
                             opacity: _opacity,
+                            panelBlur: _panelBlur,
                             interactive: _interactive,
+                            enableRipples: _enableRipples,
                             repaintContinuously: _repaintContinuously,
                             palettes: _palettes,
                             symbols: _symbols,
@@ -264,9 +479,12 @@ class _DemoPageState extends State<_DemoPage> {
                                 _palette = palette;
                               });
                             },
-                            onSymbolChanged: (symbol) {
+                            onSymbolChanged: (_) {
+                              setState(() {});
+                            },
+                            onShapeChanged: (shape) {
                               setState(() {
-                                _symbol = symbol;
+                                _shape = shape;
                               });
                             },
                             onDensityChanged: (value) {
@@ -289,14 +507,29 @@ class _DemoPageState extends State<_DemoPage> {
                                 _speed = value;
                               });
                             },
+                            onRandomMotionStrengthChanged: (value) {
+                              setState(() {
+                                _randomMotionStrength = value;
+                              });
+                            },
                             onOpacityChanged: (value) {
                               setState(() {
                                 _opacity = value;
                               });
                             },
+                            onPanelBlurChanged: (value) {
+                              setState(() {
+                                _panelBlur = value;
+                              });
+                            },
                             onInteractiveChanged: (value) {
                               setState(() {
                                 _interactive = value;
+                              });
+                            },
+                            onEnableRipplesChanged: (value) {
+                              setState(() {
+                                _enableRipples = value;
                               });
                             },
                             onRepaintContinuouslyChanged: (value) {
@@ -336,18 +569,31 @@ class _HeroPanel extends StatelessWidget {
   const _HeroPanel({
     required this.currentEffect,
     required this.selectionMode,
+    required this.selectedEffectName,
     required this.selectedEffectIndex,
+    required this.config,
+    required this.panelBlur,
   });
 
   final VisualEffect currentEffect;
   final _SelectionMode selectionMode;
+  final String selectedEffectName;
   final int selectedEffectIndex;
+  final VisualEffectConfig config;
+  final double panelBlur;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final generatedConfigSnippet = _buildConfigSnippet(
+      selectionMode: selectionMode,
+      selectedEffectName: selectedEffectName,
+      selectedEffectIndex: selectedEffectIndex,
+      config: config,
+    );
 
     return _GlassPanel(
+      blurSigma: panelBlur,
       child: Padding(
         padding: const EdgeInsets.all(28),
         child: Column(
@@ -421,6 +667,8 @@ class _HeroPanel extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 28),
+            _ConfigSnippetSection(snippet: generatedConfigSnippet),
           ],
         ),
       ),
@@ -434,13 +682,19 @@ class _ControlsPanel extends StatelessWidget {
     required this.selectedEffectName,
     required this.selectedEffectIndex,
     required this.palette,
-    required this.symbol,
+    required this.symbolController,
+    required this.currentSymbol,
+    required this.shape,
+    required this.shapes,
     required this.density,
     required this.radius,
     required this.maxScale,
     required this.speed,
+    required this.randomMotionStrength,
     required this.opacity,
+    required this.panelBlur,
     required this.interactive,
+    required this.enableRipples,
     required this.repaintContinuously,
     required this.palettes,
     required this.symbols,
@@ -449,12 +703,16 @@ class _ControlsPanel extends StatelessWidget {
     required this.onEffectIndexChanged,
     required this.onPaletteChanged,
     required this.onSymbolChanged,
+    required this.onShapeChanged,
     required this.onDensityChanged,
     required this.onRadiusChanged,
     required this.onMaxScaleChanged,
     required this.onSpeedChanged,
+    required this.onRandomMotionStrengthChanged,
     required this.onOpacityChanged,
+    required this.onPanelBlurChanged,
     required this.onInteractiveChanged,
+    required this.onEnableRipplesChanged,
     required this.onRepaintContinuouslyChanged,
   });
 
@@ -462,13 +720,19 @@ class _ControlsPanel extends StatelessWidget {
   final String selectedEffectName;
   final int selectedEffectIndex;
   final _PaletteOption palette;
-  final String symbol;
+  final TextEditingController symbolController;
+  final String currentSymbol;
+  final VisualEffectShape shape;
+  final List<VisualEffectShape> shapes;
   final double density;
   final double radius;
   final double maxScale;
   final double speed;
+  final double randomMotionStrength;
   final double opacity;
+  final double panelBlur;
   final bool interactive;
+  final bool enableRipples;
   final bool repaintContinuously;
   final List<_PaletteOption> palettes;
   final List<String> symbols;
@@ -477,12 +741,16 @@ class _ControlsPanel extends StatelessWidget {
   final ValueChanged<int> onEffectIndexChanged;
   final ValueChanged<_PaletteOption> onPaletteChanged;
   final ValueChanged<String> onSymbolChanged;
+  final ValueChanged<VisualEffectShape> onShapeChanged;
   final ValueChanged<double> onDensityChanged;
   final ValueChanged<double> onRadiusChanged;
   final ValueChanged<double> onMaxScaleChanged;
   final ValueChanged<double> onSpeedChanged;
+  final ValueChanged<double> onRandomMotionStrengthChanged;
   final ValueChanged<double> onOpacityChanged;
+  final ValueChanged<double> onPanelBlurChanged;
   final ValueChanged<bool> onInteractiveChanged;
+  final ValueChanged<bool> onEnableRipplesChanged;
   final ValueChanged<bool> onRepaintContinuouslyChanged;
 
   @override
@@ -490,6 +758,7 @@ class _ControlsPanel extends StatelessWidget {
     final theme = Theme.of(context);
 
     return _GlassPanel(
+      blurSigma: panelBlur,
       child: Padding(
         padding: const EdgeInsets.all(22),
         child: DefaultTextStyle(
@@ -606,7 +875,7 @@ class _ControlsPanel extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                'Symbol',
+                'Mark',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -615,11 +884,43 @@ class _ControlsPanel extends StatelessWidget {
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
+                children: shapes.map((item) {
+                  return ChoiceChip(
+                    label: Text(_shapeLabel(item)),
+                    selected: shape == item,
+                    onSelected: (_) => onShapeChanged(item),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: symbolController,
+                decoration: InputDecoration(
+                  labelText: 'Character or glyph',
+                  helperText: shape == VisualEffectShape.none
+                      ? 'Enter any character or short glyph.'
+                      : 'Stored for text mode. Shapes override text while selected.',
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: onSymbolChanged,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
                 children: symbols.map((item) {
                   return ChoiceChip(
                     label: Text(item, style: const TextStyle(fontSize: 18)),
-                    selected: symbol == item,
-                    onSelected: (_) => onSymbolChanged(item),
+                    selected: shape == VisualEffectShape.none &&
+                        currentSymbol == item,
+                    onSelected: (_) {
+                      symbolController
+                        ..text = item
+                        ..selection = TextSelection.collapsed(
+                          offset: item.length,
+                        );
+                      onSymbolChanged(item);
+                    },
                   );
                 }).toList(),
               ),
@@ -654,11 +955,25 @@ class _ControlsPanel extends StatelessWidget {
                 onChanged: onSpeedChanged,
               ),
               _SliderRow(
+                label: 'Random motion',
+                value: randomMotionStrength,
+                min: 0,
+                max: 0.65,
+                onChanged: onRandomMotionStrengthChanged,
+              ),
+              _SliderRow(
                 label: 'Opacity',
                 value: opacity,
                 min: 0.35,
                 max: 1,
                 onChanged: onOpacityChanged,
+              ),
+              _SliderRow(
+                label: 'Panel blur',
+                value: panelBlur,
+                min: 0,
+                max: 24,
+                onChanged: onPanelBlurChanged,
               ),
               const SizedBox(height: 6),
               SwitchListTile.adaptive(
@@ -670,6 +985,13 @@ class _ControlsPanel extends StatelessWidget {
               ),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
+                value: enableRipples,
+                title: const Text('Tap and click ripples'),
+                subtitle: const Text('Emit ripple bursts on pointer down'),
+                onChanged: onEnableRipplesChanged,
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
                 value: repaintContinuously,
                 title: const Text('Continuous repaint'),
                 subtitle: const Text('Turn off to save work when idle'),
@@ -678,6 +1000,87 @@ class _ControlsPanel extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ConfigSnippetSection extends StatelessWidget {
+  const _ConfigSnippetSection({required this.snippet});
+
+  final String snippet;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: _fade(Colors.white, 0.07),
+        border: Border.all(color: _fade(Colors.white, 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  'Copyable config',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: snippet));
+                  if (!context.mounted) {
+                    return;
+                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Configuration snippet copied.'),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.content_copy_rounded),
+                label: const Text('Copy'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'This snippet reflects the current settings so you can paste it into your app.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: _fade(Colors.white, 0.68),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(maxHeight: 320),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              color: _fade(Colors.black, 0.26),
+              border: Border.all(color: _fade(Colors.white, 0.1)),
+            ),
+            child: SingleChildScrollView(
+              child: SelectableText(
+                snippet,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontFamily: 'monospace',
+                  height: 1.45,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -728,32 +1131,40 @@ class _SliderRow extends StatelessWidget {
 }
 
 class _GlassPanel extends StatelessWidget {
-  const _GlassPanel({required this.child});
+  const _GlassPanel({
+    required this.child,
+    required this.blurSigma,
+  });
 
   final Widget child;
+  final double blurSigma;
 
   @override
   Widget build(BuildContext context) {
+    final panel = DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        color: _fade(Colors.white, 0.08),
+        border: Border.all(color: _fade(Colors.white, 0.16)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: _fade(Colors.black, 0.22),
+            blurRadius: 28,
+            offset: const Offset(0, 18),
+          ),
+        ],
+      ),
+      child: child,
+    );
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(30),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(30),
-            color: _fade(Colors.white, 0.08),
-            border: Border.all(color: _fade(Colors.white, 0.16)),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: _fade(Colors.black, 0.22),
-                blurRadius: 28,
-                offset: const Offset(0, 18),
-              ),
-            ],
-          ),
-          child: child,
-        ),
-      ),
+      child: blurSigma <= 0
+          ? panel
+          : BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+              child: panel,
+            ),
     );
   }
 }
@@ -803,10 +1214,12 @@ class _PaletteOption {
     required this.background,
     required this.foreground,
     required this.accent,
+    required this.effectColors,
   });
 
   final String name;
   final Color background;
   final Color foreground;
   final Color accent;
+  final List<Color> effectColors;
 }

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show PointerDeviceKind;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -70,11 +71,7 @@ class _VisualEffectSurfaceState extends State<VisualEffectSurface>
   bool get _pointerEnabled =>
       widget.interactive && widget.config.enablePointerInteraction;
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _ticker.muted = !TickerMode.of(context);
-  }
+  bool get _ripplesEnabled => _pointerEnabled && widget.config.enableRipples;
 
   @override
   void didUpdateWidget(covariant VisualEffectSurface oldWidget) {
@@ -84,6 +81,10 @@ class _VisualEffectSurfaceState extends State<VisualEffectSurface>
       _frameState.clearPointer(immediate: true);
     } else if (!oldWidget.interactive && widget.interactive) {
       _frameState.markNeedsPaint();
+    }
+
+    if (!widget.config.enableRipples && oldWidget.config.enableRipples) {
+      _frameState.clearRipples();
     }
 
     if (oldWidget.repaintContinuously != widget.repaintContinuously) {
@@ -126,6 +127,14 @@ class _VisualEffectSurfaceState extends State<VisualEffectSurface>
     _ensureTickerRunning();
   }
 
+  void _emitRipple(Offset localPosition) {
+    if (!_ripplesEnabled) {
+      return;
+    }
+    _frameState.addRipple(localPosition);
+    _ensureTickerRunning();
+  }
+
   void _clearPointer() {
     if (!_pointerEnabled) {
       return;
@@ -133,6 +142,17 @@ class _VisualEffectSurfaceState extends State<VisualEffectSurface>
     _frameState.clearPointer();
     if (!widget.repaintContinuously) {
       _ensureTickerRunning();
+    }
+  }
+
+  void _handlePointerDown(PointerDownEvent event) {
+    _updatePointer(event.localPosition);
+    _emitRipple(event.localPosition);
+  }
+
+  void _handlePointerUp(PointerEvent event) {
+    if (event.kind != PointerDeviceKind.mouse) {
+      _clearPointer();
     }
   }
 
@@ -185,10 +205,10 @@ class _VisualEffectSurfaceState extends State<VisualEffectSurface>
             onExit: (_) => _clearPointer(),
             child: Listener(
               behavior: HitTestBehavior.translucent,
-              onPointerDown: (event) => _updatePointer(event.localPosition),
+              onPointerDown: _handlePointerDown,
               onPointerMove: (event) => _updatePointer(event.localPosition),
               onPointerHover: (event) => _updatePointer(event.localPosition),
-              onPointerUp: (_) => _clearPointer(),
+              onPointerUp: _handlePointerUp,
               onPointerCancel: (_) => _clearPointer(),
               child: content,
             ),
@@ -246,6 +266,14 @@ class _VisualEffectPainter extends CustomPainter {
 
     final pointer = frameState.pointerPosition;
     final localPointer = pointer?.translate(-paintRect.left, -paintRect.top);
+    final ripples = <VisualEffectRipple>[
+      for (final ripple in frameState.ripples)
+        VisualEffectRipple(
+          position: ripple.position.translate(-paintRect.left, -paintRect.top),
+          ageSeconds: ripple.ageSeconds,
+          progress: ripple.progress,
+        ),
+    ];
 
     final frame = VisualEffectFrame(
       canvasSize: size,
@@ -254,6 +282,7 @@ class _VisualEffectPainter extends CustomPainter {
       timeSeconds: frameState.elapsedSeconds,
       pointerPosition: localPointer,
       pointerStrength: frameState.pointerStrength,
+      ripples: ripples,
     );
 
     canvas.save();
@@ -291,21 +320,42 @@ class _SurfaceFrameState extends ChangeNotifier {
   Offset? _targetPointer;
   double _pointerStrength = 0;
   double _targetPointerStrength = 0;
+  static const double _rippleLifetimeSeconds = 1.9;
+  final List<_TrackedRipple> _ripples = <_TrackedRipple>[];
 
   double get elapsedSeconds => _elapsedSeconds;
   Offset? get pointerPosition => _currentPointer;
   double get pointerStrength => _pointerStrength;
+  List<_TrackedRipple> get ripples =>
+      List<_TrackedRipple>.unmodifiable(_ripples);
 
   bool get isAnimating =>
       _targetPointer != null ||
       _targetPointerStrength > 0 ||
-      _pointerStrength > 0.001;
+      _pointerStrength > 0.001 ||
+      _ripples.isNotEmpty;
 
   void setPointer(Offset localPosition) {
     _targetPointer = localPosition;
     _currentPointer ??= localPosition;
     _pointerStrength = math.max(_pointerStrength, 0.45);
     _targetPointerStrength = 1;
+    notifyListeners();
+  }
+
+  void addRipple(Offset localPosition) {
+    _ripples.add(_TrackedRipple(position: localPosition));
+    if (_ripples.length > 8) {
+      _ripples.removeAt(0);
+    }
+    notifyListeners();
+  }
+
+  void clearRipples() {
+    if (_ripples.isEmpty) {
+      return;
+    }
+    _ripples.clear();
     notifyListeners();
   }
 
@@ -367,9 +417,42 @@ class _SurfaceFrameState extends ChangeNotifier {
       _pointerStrength = 0;
     }
 
+    for (var index = _ripples.length - 1; index >= 0; index--) {
+      final ripple = _ripples[index];
+      final nextAge = ripple.ageSeconds + deltaSeconds;
+      if (nextAge >= _rippleLifetimeSeconds) {
+        _ripples.removeAt(index);
+      } else {
+        _ripples[index] = ripple.copyWith(ageSeconds: nextAge);
+      }
+    }
+
     notifyListeners();
     return isAnimating;
   }
 
   static double _lerp(double a, double b, double t) => a + (b - a) * t;
+}
+
+class _TrackedRipple {
+  const _TrackedRipple({
+    required this.position,
+    this.ageSeconds = 0,
+  });
+
+  final Offset position;
+  final double ageSeconds;
+
+  double get progress =>
+      (ageSeconds / _SurfaceFrameState._rippleLifetimeSeconds).clamp(0.0, 1.0);
+
+  _TrackedRipple copyWith({
+    Offset? position,
+    double? ageSeconds,
+  }) {
+    return _TrackedRipple(
+      position: position ?? this.position,
+      ageSeconds: ageSeconds ?? this.ageSeconds,
+    );
+  }
 }

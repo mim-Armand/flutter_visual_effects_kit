@@ -8,7 +8,8 @@ It is designed for modern Flutter UIs on web, desktop, and mobile, with a clean 
 
 - Reusable `VisualEffectSurface` widget for backgrounds and shaped surfaces
 - Built-in effect registry with lookup by string name or integer index
-- Three included effects: `plusGrid`, `dotField`, and `waveGrid`
+- Four included effects: `plusGrid`, `dotField`, `waveGrid`, and `liquidRipple`
+- Shared symbol, shape, palette, random motion, and ripple controls across all built-in effects
 - Premium hover response on web and desktop, with touch-friendly fallback on mobile
 - Strongly typed immutable `VisualEffectConfig` with `copyWith`
 - Clean custom effect API for future package or app-specific extensions
@@ -20,7 +21,7 @@ Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  visual_effects_kit: ^0.1.0
+  visual_effects_kit: ^0.1.4
 ```
 
 Then fetch packages:
@@ -86,9 +87,10 @@ final effects = VisualEffects.availableEffects;
 
 ## Built-in effects
 
-- `plusGrid`: A responsive grid of symbols such as `"+"` that smoothly scales near the pointer
-- `dotField`: A softly animated field of dots with hover-reactive emphasis
-- `waveGrid`: A subtle grid of moving capsules with wave motion and optional pointer disturbance
+- `plusGrid`: A responsive grid of text glyphs or shapes that smoothly scales near the pointer
+- `dotField`: A softly animated field of glyphs or shapes with hover-reactive emphasis and ripple-aware highlights
+- `waveGrid`: A subtle grid of glyphs or shapes with wave motion, palette blending, and optional pointer disturbance
+- `liquidRipple`: A liquid field of drifting glyphs or shapes with click or touch ripples, pointer stirring, and support for up to five blended colors
 
 ## Configuration
 
@@ -99,16 +101,71 @@ const config = VisualEffectConfig(
   backgroundColor: Color(0xFF0A1220),
   foregroundColor: Color(0xFFD7E3F7),
   accentColor: Color(0xFF77F2D7),
+  effectColors: <Color>[
+    Color(0xFF78F6E2),
+    Color(0xFF7DBDFF),
+    Color(0xFFD7E3F7),
+    Color(0xFF7D7BFF),
+    Color(0xFF63F0B7),
+  ],
   density: 1.1,
   symbol: '+',
+  shape: VisualEffectShape.none,
   baseCellSize: 28,
   minScale: 0.9,
   maxScale: 2.5,
   interactionRadius: 140,
   animationSpeed: 1.0,
+  randomMotionStrength: 0.18,
+  easing: Curves.easeOutCubic,
+  enablePointerInteraction: true,
+  enableRipples: true,
   opacity: 1.0,
   padding: EdgeInsets.all(12),
   randomSeed: 7,
+);
+```
+
+Complete example with every available option:
+
+```dart
+const fullConfig = VisualEffectConfig(
+  backgroundColor: Color(0xFF08111E),
+  foregroundColor: Color(0xFFD8E7FF),
+  accentColor: Color(0xFF70F4E1),
+  effectColors: <Color>[
+    Color(0xFF8AF7E4),
+    Color(0xFF77C8FF),
+    Color(0xFFD8E7FF),
+    Color(0xFF6C8DFF),
+    Color(0xFF5AF2B8),
+  ],
+  density: 1.15,
+  symbol: '+',
+  shape: VisualEffectShape.none,
+  baseCellSize: 28,
+  minScale: 0.9,
+  maxScale: 2.4,
+  interactionRadius: 140,
+  animationSpeed: 1.0,
+  randomMotionStrength: 0.18,
+  easing: Curves.easeOutCubic,
+  enablePointerInteraction: true,
+  enableRipples: true,
+  opacity: 1.0,
+  padding: EdgeInsets.all(12),
+  randomSeed: 7,
+);
+```
+
+All built-in effects honor the shared `symbol`, `shape`, `effectColors`, `randomMotionStrength`, `minScale`, `maxScale`, `opacity`, and `enableRipples` settings.
+
+You can then pass it directly into the surface:
+
+```dart
+VisualEffectSurface(
+  effectName: 'liquidRipple',
+  config: fullConfig,
 );
 ```
 
@@ -150,7 +207,9 @@ void registerEffects() {
 The package includes a polished `/example` app that demonstrates:
 
 - switching effects by name and by index
-- live controls for density, radius, scale, speed, opacity, symbol, and palettes
+- live controls for density, radius, scale, speed, opacity, arbitrary glyph input, built-in shape selection, palettes, and ripple toggles
+- adjustable glass-panel blur so the background effect can be viewed more clearly
+- a live copy-pasteable `VisualEffectConfig` snippet that mirrors the current demo settings
 - an overlay panel above the animated background
 - a clear hover-focused `plusGrid` demo for Flutter web and desktop
 
@@ -169,13 +228,13 @@ flutter run -d chrome
 After a successful publish, create a version tag so the source matches what was uploaded:
 ```
 git add .
-git commit -m "Release visual_effects_kit v0.1.1"
-git tag v0.1.1
+git commit -m "Release visual_effects_kit v0.1.4"
+git tag v0.1.4
 git push
-git push origin v0.1.1
+git push origin v0.1.4
 ```
 
-Replace 0.1.1 with the version you actually published.
+Replace 0.1.4 with the version you actually published.
 
 ## Full command sequence
 
