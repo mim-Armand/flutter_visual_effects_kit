@@ -21,7 +21,7 @@ Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  visual_effects_kit: ^0.1.4
+  visual_effects_kit: ^0.1.2
 ```
 
 Then fetch packages:
@@ -228,13 +228,13 @@ flutter run -d chrome
 After a successful publish, create a version tag so the source matches what was uploaded:
 ```
 git add .
-git commit -m "Release visual_effects_kit v0.1.4"
-git tag v0.1.4
+git commit -m "Release visual_effects_kit v0.1.2"
+git tag v0.1.2
 git push
-git push origin v0.1.4
+git push origin v0.1.2
 ```
 
-Replace 0.1.4 with the version you actually published.
+Replace 0.1.2 with the version you actually published.
 
 ## Full command sequence
 
